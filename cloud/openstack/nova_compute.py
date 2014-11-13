@@ -89,12 +89,17 @@ options:
      version_added: "1.8"
    flavor_id:
      description:
-        - The id of the flavor in which the new VM has to be created. Mutually exclusive with flavor_ram
+        - The id of the flavor in which the new VM has to be created. Mutually exclusive with flavor_ram and flavor_name
      required: false
      default: 1
+   flavor_name:
+     description:
+        - The name of the flavor in which the new VM has to be created. Mutually exclusive with flavor_id and flavor_ram
+     required: false
+     default: None
    flavor_ram:
      description:
-        - The minimum amount of ram in MB that the flavor in which the new VM has to be created must have. Mutually exclusive with flavor_id
+        - The minimum amount of ram in MB that the flavor in which the new VM has to be created must have. Mutually exclusive with flavor_id and flavor_name
      required: false
      default: 1
      version_added: "1.8"
@@ -400,7 +405,12 @@ def _get_image_id(module, nova):
 
 
 def _get_flavor_id(module, nova):
-    if module.params['flavor_ram']:
+    if module.params['flavor_name']:
+        for flavor in nova.flavors.list():
+            if flavor.name == module.params['flavor_name']:
+                return flavor.id
+        module.fail_json(msg = "Error finding flavor with name %s" % module.params['flavor_name'])
+    elif module.params['flavor_ram']:
         for flavor in sorted(nova.flavors.list(), key=operator.attrgetter('ram')):
             if (flavor.ram >= module.params['flavor_ram'] and
                     (not module.params['flavor_include'] or module.params['flavor_include'] in flavor.name)):
@@ -529,6 +539,7 @@ def main():
         image_name                      = dict(default=None),
         image_exclude                   = dict(default='(deprecated)'),
         flavor_id                       = dict(default=1),
+        flavor_name                     = dict(default=None),
         flavor_ram                      = dict(default=None, type='int'),
         flavor_include                  = dict(default=None),
         key_name                        = dict(default=None),
@@ -552,6 +563,8 @@ def main():
             ['floating_ips','floating_ip_pools'],
             ['image_id','image_name'],
             ['flavor_id','flavor_ram'],
+            ['flavor_id','flavor_name'],
+            ['flavor_ram','flavor_name'],
         ],
     )
 
