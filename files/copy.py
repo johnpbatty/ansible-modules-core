@@ -195,13 +195,13 @@ def main():
     if os.path.exists(dest):
         if os.path.islink(dest) and follow:
             dest = os.path.realpath(dest)
-        if not force:
-            module.exit_json(msg="file already exists", src=src, dest=dest, changed=False)
         if (os.path.isdir(dest)):
             basename = os.path.basename(src)
             if original_basename:
                 basename = original_basename
             dest = os.path.join(dest, basename)
+        if (not force) and os.path.exists(dest):
+            module.exit_json(msg="file already exists", src=src, dest=dest, changed=False)
         if os.access(dest, os.R_OK):
             checksum_dest = module.sha1(dest)
     else:
